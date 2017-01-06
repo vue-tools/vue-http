@@ -1,6 +1,8 @@
-import http from 'vue-resource'
+import axios from 'axios'
 
 function plugin(Vue, opts) {
+    let http = axios.create()
+
     opts = Object.assign({}, {
         root: '',
         headers: {},
@@ -8,145 +10,132 @@ function plugin(Vue, opts) {
         timeout: 20000,
         duration: 1000,
         timestamp: false,
-        credentials: true,
-        emulateJSON: false,
-        emulateHTTP: false,
-        error: errorHandler
+        credentials: false,
+        error: errorHandler,
+        validateStatus: validateStatus
     }, opts)
 
-    Vue.use(http)
-    Vue.http.options.root = opts.root
-    Vue.http.headers.common = opts.headers
-    Vue.http.options.timeout = opts.timeout
-    Vue.http.options.duration = opts.duration
-    Vue.http.options.emulateJSON = opts.emulateJSON
-    Vue.http.options.emulateHTTP = opts.emulateHTTP
-    Vue.http.options.credentials = opts.credentials
+    http.defaults.baseURL = opts.root
+    http.defaults.headers = opts.headers
+    http.defaults.timeout = opts.timeout
+    http.defaults.duration = opts.duration
+    http.defaults.withCredentials = opts.credentials
+    http.defaults.validateStatus = opts.svalidateStatus
 
-    requestTimeoutHandler(Vue, opts)
-    requestLoadingHandler(Vue, opts)
-    requestTimestampHandler(Vue, opts)
-    requestRepeatHandler(Vue, opts)
+    requestTimeoutHandler(http, opts)
+    requestLoadingHandler(http, opts)
+    requestTimestampHandler(http, opts)
+    requestRepeatHandler(http, opts)
 
-    responseStatusHandler(Vue, opts)
-    responseFormatDataHandler(Vue, opts)
+    responseStatusHandler(http, opts)
+    responseFormatDataHandler(http, opts)
+
+    Vue.http = http
+    Vue.prototype.$http = http
 }
 
-function requestTimeoutHandler(Vue, opts) {
-    Vue.http.interceptors.push((req, next) => {
-        let before, time, timeout
-
-        time = req.timeout
-        before = req.before
-
-        delete req.timeout
-
-        req.before = function (req) {
-            if (before && !before.call(this, req)) {
-                return
-            }
-
-            timeout = setTimeout(() => {
-                req.abort()
-
-                next(req.respondWith(req.body, { status: 601 }))
-            }, time)
+function requestTimeoutHandler(http, opts) {
+    http.interceptors.response.use((res) => res, (err) => {
+        if (err.message && err.message.indexOf('timeout') !== -1) {
+            return Promise.resolve({ config: err.config, status: 601, statusText: '网络超时' })
         }
 
-        next((res) => {
-            clearTimeout(timeout)
-        })
+        return Promise.reject(err)
     })
 }
 
-function requestLoadingHandler(Vue, opts) {
-    Vue.http.interceptors.push((req, next) => {
-        if (req.duration === 0) {
-            next()
-        } else {
-            let isShow, timeout
+function requestLoadingHandler(http, opts) {
+    http.interceptors.request.use((config) => {
+        config.loadingTimeout = 0
+        config.loadingShow = false
 
-            timeout = setTimeout(() => {
-                opts.loading(isShow = true)
-            }, req.duration)
-
-            next((res) => {
-                clearTimeout(timeout)
-                isShow && opts.loading(isShow = false)
-            })
+        if (config.duration !== 0) {
+            config.loadingTimeout = setTimeout(() => {
+                opts.loading(config.loadingShow = true)
+            }, config.duration)
         }
+
+        return config
+    })
+
+    http.interceptors.response.use((res) => {
+        clearTimeout(res.config.loadingTimeout)
+
+        if (res.config.loadingShow) {
+            opts.loading(res.config.loadingShow = false)
+        }
+
+        return res
     })
 }
 
-function requestRepeatHandler(Vue, opts) {
+function requestTimestampHandler(http, opts) {
+    http.interceptors.request.use((config) => {
+        if (config.method.toLowerCase() === 'get' && opts.timestamp) {
+            config.url = `${config.url}${config.url.indexOf('?') < 0 ? '?' : '&'}t=${Date.now()}`
+        }
+
+        return config
+    })
+}
+
+function requestRepeatHandler(http, opts) {
     let cache = []
 
-    Vue.http.interceptors.push((req, next) => {
-        let uid = ''
+    http.interceptors.request.use((config) => {
+        config.requestId = ''
 
-        if (req.method.toLowerCase() === 'get') {
-            uid = `${req.method.toLowerCase()}${req.url}${req.params ? JSON.stringify(req.params) : ''}`
+        if (config.method.toLowerCase() === 'get') {
+            config.requestId = `${config.method.toLowerCase()}${config.url}${config.params ? JSON.stringify(config.params) : ''}`
         }
 
-        if (req.method.toLowerCase() === 'post') {
-            uid = `${req.method.toLowerCase()}${req.url}${req.data ? JSON.stringify(req.data) : ''}`
+        if (config.method.toLowerCase() === 'post') {
+            config.requestId = `${config.method.toLowerCase()}${config.url}${config.data ? JSON.stringify(config.data) : ''}`
         }
-        
-        if (cache.indexOf(uid) === -1) {
-            cache.push(uid)
 
-            next((res) => {
-                cache.splice(cache.indexOf(uid), 1)
-            })
+        if (cache.indexOf(config.requestId) === -1) {
+            cache.push(config.requestId)
         } else {
-            next(req.respondWith(req.body, { status: 602 }))
-        }
-    })
-}
-
-function responseFormatDataHandler(Vue, opts) {
-    Vue.http.interceptors.push((req, next) => {
-        next((res) => {
-            if (res.data && res.data.message && res.data.status && res.data.data) {
-                res.message = res.data.message
-                res.code = res.data.status
-                res.data = res.data.data
-            }
-        })
-    })
-}
-
-function responseStatusHandler(Vue, opts) {
-    Vue.http.interceptors.push((req, next) => {
-        next((res) => {
-            if (res.status === 601) {
-                return new Vue.Promise(opts.error.bind(null, '网络超时'))
-            }
-
-            if (res.status === 602) {
-                return new Vue.Promise(() => {
-                    console.error('The last request was in the pending state, not to send multiple requests')
-                })
-            }
-
-            if (`${res.status}`.charAt(0) === '4') {
-                return new Vue.Promise(opts.error.bind(null, '请求资源不存在'))
-            }
-
-            if (`${res.status}`.charAt(0) === '5') {
-                return new Vue.Promise(opts.error.bind(null, '服务器繁忙，请稍后再试'))
-            }
-        })
-    })
-}
-
-function requestTimestampHandler(Vue, opts) {
-    Vue.http.interceptors.push((req, next) => {
-        if (req.method.toLowerCase() === 'get' && opts.timestamp) {
-            req.url = `${req.url}${req.url.indexOf('?') < 0 ? '?' : '&'}t=${Date.now()}`
+            console.error('The last request was in the pending state, not to send multiple requests')
+            return new Promise(noop)
         }
 
-        next()
+        return config
+    })
+
+    http.interceptors.response.use((res) => {
+        cache.splice(cache.indexOf(res.config.requestId), 1)
+        return res
+    })
+}
+
+function responseStatusHandler(http, opts) {
+    http.interceptors.response.use((res) => {
+        if (res.status === 601) {
+            return new Promise(opts.error.bind(null, res.statusText))
+        }
+
+        if (`${res.status}`.charAt(0) === '4') {
+            return new Promise(opts.error.bind(null, '请求资源不存在'))
+        }
+
+        if (`${res.status}`.charAt(0) === '5') {
+            return new Promise(opts.error.bind(null, '服务器繁忙，请稍后再试'))
+        }
+
+        return res
+    })
+}
+
+function responseFormatDataHandler(http, opts) {
+    http.interceptors.response.use((res) => {
+        if (res.data && res.data.message && res.data.status && res.data.data) {
+            res.message = res.data.message
+            res.code = res.data.status
+            res.data = res.data.data
+        }
+
+        return res
     })
 }
 
@@ -154,6 +143,10 @@ function noop() { }
 
 function errorHandler(message) {
     alert(message)
+}
+
+function validateStatus(status) {
+    return true
 }
 
 if (typeof window !== 'undefined' && window.Vue) {

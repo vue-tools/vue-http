@@ -1,3 +1,4 @@
+import axios from 'axios'
 import Vue from 'vue'
 import http from '../src'
 
@@ -18,22 +19,21 @@ function Spy() {
 describe('Vue-http', () => {
     let spy1 = Spy()
     let spy2 = Spy()
-    let root = `${location.protocol}//${location.hostname}:8889`
 
     Vue.use(http, {
-        root,
         error: spy1,
         loading: spy2,
         timeout: 2000,
-        timestamp: true
+        timestamp: true,
+        root: `${location.protocol}//${location.hostname}:8889`
     })
 
     it('get', (done) => {
         let params = { foo: 'bar' }
-
+        
         Vue.http.get('get', { params }).then((res) => {
-            expect(res.ok).to.equal(true)
             expect(res.status).to.equal(200)
+            expect(res.statusText).to.equal("OK")
             expect(res.data.foo).to.equal(params.foo)
             done()
         })
@@ -43,8 +43,8 @@ describe('Vue-http', () => {
         let params = { foo: 'bar' }
 
         Vue.http.post('post', params).then((res) => {
-            expect(res.ok).to.equal(true)
             expect(res.status).to.equal(200)
+            expect(res.statusText).to.equal("OK")
             expect(res.data.foo).to.equal(params.foo)
             done()
         })
@@ -53,17 +53,14 @@ describe('Vue-http', () => {
     it('timestamp', (done) => {
         let params = { foo: 'bar' }
 
-        Vue.Promise.all([
-            Vue.http.get('timestamp', { params }),
-            Vue.http.post('timestamp', params)
-        ]).then((res) => {
-            expect(res[0].ok).to.equal(true)
+        Promise.all([Vue.http.get('timestamp', { params }), Vue.http.post('timestamp', params)]).then((res) => {
             expect(res[0].status).to.equal(200)
+            expect(res[0].statusText).to.equal("OK")
             expect(res[0].data.foo).to.equal(params.foo)
             expect(isDate(res[0].data.t)).to.equal(true)
 
-            expect(res[1].ok).to.equal(true)
             expect(res[1].status).to.equal(200)
+            expect(res[1].statusText).to.equal("OK")
             expect(res[1].data.t).to.equal(undefined)
             expect(res[1].data.foo).to.equal(params.foo)
             done()
@@ -91,7 +88,6 @@ describe('Vue-http', () => {
         let params = { foo: 'bar' }
 
         Vue.http.get('repeat', { params }).then((res) => {
-            expect(res.ok).to.equal(true)
             expect(res.status).to.equal(200)
             expect(res.data.foo).to.equal(params.foo)
             done()
@@ -135,7 +131,6 @@ describe('Vue-http', () => {
                 Auth: 'test'
             }
         }).then((res) => {
-            expect(res.ok).to.equal(true)
             expect(res.status).to.equal(200)
             expect(res.data).to.equal('test')
             done()
