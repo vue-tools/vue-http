@@ -129,7 +129,7 @@ function responseStatusHandler(http, opts) {
 
 function responseFormatDataHandler(http, opts) {
     http.interceptors.response.use((res) => {
-        if (res.data && res.data.message && res.data.status && res.data.data) {
+        if (res.data) {
             res.message = res.data.message
             res.code = res.data.status
             res.data = res.data.data
