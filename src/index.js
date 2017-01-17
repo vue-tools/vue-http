@@ -22,6 +22,7 @@ function plugin(Vue, opts) {
     http.defaults.withCredentials = opts.credentials
     http.defaults.validateStatus = opts.svalidateStatus
 
+    requestFailedHandler(http, opts)
     requestTimeoutHandler(http, opts)
     requestLoadingHandler(http, opts)
     requestTimestampHandler(http, opts)
@@ -32,6 +33,16 @@ function plugin(Vue, opts) {
 
     Vue.http = http
     Vue.prototype.$http = http
+}
+
+function requestFailedHandler(http, opts) {
+    http.interceptors.request.use((config) => {
+        if(!(config.onLine = window.navigator.onLine)) {
+            opts.error('网络超时')
+        }
+            
+        return config
+    })
 }
 
 function requestTimeoutHandler(http, opts) {
@@ -48,6 +59,10 @@ function requestLoadingHandler(http, opts) {
     http.interceptors.request.use((config) => {
         config.loadingTimeout = 0
         config.loadingShow = false
+
+        if(!config.onLine) {
+            return config
+        }
 
         if (config.duration !== 0) {
             config.loadingTimeout = setTimeout(() => {
@@ -71,6 +86,10 @@ function requestLoadingHandler(http, opts) {
 
 function requestTimestampHandler(http, opts) {
     http.interceptors.request.use((config) => {
+        if(!config.onLine) {
+            return config
+        }
+        
         if (config.method.toLowerCase() === 'get' && opts.timestamp) {
             config.url = `${config.url}${config.url.indexOf('?') < 0 ? '?' : '&'}t=${Date.now()}`
         }
@@ -84,6 +103,10 @@ function requestRepeatHandler(http, opts) {
 
     http.interceptors.request.use((config) => {
         config.requestId = ''
+
+        if(!config.onLine) {
+            return config
+        }
 
         if (config.method.toLowerCase() === 'get') {
             config.requestId = `${config.method.toLowerCase()}${config.url}${config.params ? JSON.stringify(config.params) : ''}`
