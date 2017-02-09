@@ -44,11 +44,11 @@ function plugin(Vue, opts) {
     http.defaults.withCredentials = opts.credentials;
     http.defaults.validateStatus = opts.svalidateStatus;
 
-    requestFailedHandler(http, opts);
     requestTimeoutHandler(http, opts);
     requestLoadingHandler(http, opts);
     requestTimestampHandler(http, opts);
     requestRepeatHandler(http, opts);
+    requestFailedHandler(http, opts);
 
     responseStatusHandler(http, opts);
     responseFormatDataHandler(http, opts);
