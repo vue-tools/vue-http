@@ -61,7 +61,6 @@
   "scripts": {
     "prepublish": "npm run compile",
     "compile": "node_modules/.bin/babel src -d dist",
-    "report-coverage": "./node_modules/.bin/codecov",
-    "test": "cross-env BABEL_ENV=test ./node_modules/karma/bin/karma start ./tests/karma.conf.js"
+    "test": "cross-env BABEL_ENV=test ./node_modules/karma/bin/karma start ./tests/karma.conf.js && ./node_modules/.bin/codecov"
   }
 }
