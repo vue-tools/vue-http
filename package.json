@@ -26,6 +26,7 @@
     "babel-preset-stage-0": "^6.22.0",
     "babel-runtime": "^6.23.0",
     "chai": "^3.5.0",
+    "codecov": "^1.0.1",
     "cross-env": "^3.1.4",
     "css-loader": "^0.26.2",
     "file-loader": "^0.10.1",
@@ -60,6 +61,7 @@
   "scripts": {
     "prepublish": "npm run compile",
     "compile": "node_modules/.bin/babel src -d dist",
+    "report-coverage": "./node_modules/.bin/codecov",
     "test": "cross-env BABEL_ENV=test ./node_modules/karma/bin/karma start ./tests/karma.conf.js"
   }
 }

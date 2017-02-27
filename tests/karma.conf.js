@@ -17,6 +17,9 @@ module.exports = function (config) {
             }, {
                 type: 'lcov',
                 subdir: '.'
+            }, {
+                type: 'json',
+                subdir: '.'
             }]
         },
         plugins: [
