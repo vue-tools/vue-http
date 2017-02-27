@@ -1,31 +1,9 @@
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _stringify = require('babel-runtime/core-js/json/stringify');
-
-var _stringify2 = _interopRequireDefault(_stringify);
-
-var _promise = require('babel-runtime/core-js/promise');
-
-var _promise2 = _interopRequireDefault(_promise);
-
-var _assign = require('babel-runtime/core-js/object/assign');
-
-var _assign2 = _interopRequireDefault(_assign);
-
-var _axios = require('axios');
-
-var _axios2 = _interopRequireDefault(_axios);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+import axios from 'axios';
 
 function plugin(Vue, opts) {
-    var http = _axios2.default.create();
+    let http = axios.create();
 
-    opts = (0, _assign2.default)({}, {
+    opts = Object.assign({}, {
         root: '',
         headers: {},
         loading: noop,
@@ -33,8 +11,10 @@ function plugin(Vue, opts) {
         duration: 1000,
         timestamp: false,
         credentials: false,
-        error: errorHandler,
-        validateStatus: validateStatus
+        validateStatus: null,
+        error: function (message) {
+            alert(message);
+        }
     }, opts);
 
     http.defaults.baseURL = opts.root;
@@ -58,8 +38,18 @@ function plugin(Vue, opts) {
 }
 
 function requestFailedHandler(http, opts) {
-    http.interceptors.request.use(function (config) {
-        if (!(config.onLine = window.navigator.onLine)) {
+    http.interceptors.request.use(config => {
+        let onLine = true;
+
+        if (window.navigator.onLine !== undefined) {
+            onLine = window.navigator.onLine;
+        }
+
+        if (config.onLine !== undefined) {
+            onLine = config.onLine;
+        }
+
+        if (!(config.onLine = onLine)) {
             opts.error('网络超时');
         }
 
@@ -68,19 +58,15 @@ function requestFailedHandler(http, opts) {
 }
 
 function requestTimeoutHandler(http, opts) {
-    http.interceptors.response.use(function (res) {
-        return res;
-    }, function (err) {
-        if (err.message && err.message.indexOf('timeout') !== -1) {
-            return _promise2.default.resolve({ config: err.config, status: 601, statusText: '网络超时' });
+    http.interceptors.response.use(res => res, err => {
+        if (err.code === 'ECONNABORTED') {
+            return Promise.resolve({ config: err.config, status: 601, statusText: '网络超时' });
         }
-
-        return _promise2.default.reject(err);
     });
 }
 
 function requestLoadingHandler(http, opts) {
-    http.interceptors.request.use(function (config) {
+    http.interceptors.request.use(config => {
         config.loadingTimeout = 0;
         config.loadingShow = false;
 
@@ -89,7 +75,7 @@ function requestLoadingHandler(http, opts) {
         }
 
         if (config.duration !== 0) {
-            config.loadingTimeout = setTimeout(function () {
+            config.loadingTimeout = setTimeout(() => {
                 opts.loading(config.loadingShow = true);
             }, config.duration);
         }
@@ -97,7 +83,7 @@ function requestLoadingHandler(http, opts) {
         return config;
     });
 
-    http.interceptors.response.use(function (res) {
+    http.interceptors.response.use(res => {
         clearTimeout(res.config.loadingTimeout);
 
         if (res.config.loadingShow) {
@@ -109,13 +95,13 @@ function requestLoadingHandler(http, opts) {
 }
 
 function requestTimestampHandler(http, opts) {
-    http.interceptors.request.use(function (config) {
+    http.interceptors.request.use(config => {
         if (!config.onLine) {
             return config;
         }
 
         if (config.method.toLowerCase() === 'get' && opts.timestamp) {
-            config.url = '' + config.url + (config.url.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now();
+            config.url = `${config.url}${config.url.indexOf('?') < 0 ? '?' : '&'}t=${Date.now()}`;
         }
 
         return config;
@@ -123,9 +109,9 @@ function requestTimestampHandler(http, opts) {
 }
 
 function requestRepeatHandler(http, opts) {
-    var cache = [];
+    let cache = [];
 
-    http.interceptors.request.use(function (config) {
+    http.interceptors.request.use(config => {
         config.requestId = '';
 
         if (!config.onLine) {
@@ -133,41 +119,41 @@ function requestRepeatHandler(http, opts) {
         }
 
         if (config.method.toLowerCase() === 'get') {
-            config.requestId = '' + config.method.toLowerCase() + config.url + (config.params ? (0, _stringify2.default)(config.params) : '');
+            config.requestId = `${config.method.toLowerCase()}${config.url}${config.params ? JSON.stringify(config.params) : ''}`;
         }
 
         if (config.method.toLowerCase() === 'post') {
-            config.requestId = '' + config.method.toLowerCase() + config.url + (config.data ? (0, _stringify2.default)(config.data) : '');
+            config.requestId = `${config.method.toLowerCase()}${config.url}${config.data ? JSON.stringify(config.data) : ''}`;
         }
 
         if (cache.indexOf(config.requestId) === -1) {
             cache.push(config.requestId);
         } else {
             console.error('The last request was in the pending state, not to send multiple requests');
-            return new _promise2.default(noop);
+            return new Promise(noop);
         }
 
         return config;
     });
 
-    http.interceptors.response.use(function (res) {
+    http.interceptors.response.use(res => {
         cache.splice(cache.indexOf(res.config.requestId), 1);
         return res;
     });
 }
 
 function responseStatusHandler(http, opts) {
-    http.interceptors.response.use(function (res) {
+    http.interceptors.response.use(res => {
         if (res.status === 601) {
-            return new _promise2.default(opts.error.bind(null, res.statusText));
+            return new Promise(opts.error.bind(null, res.statusText));
         }
 
-        if (('' + res.status).charAt(0) === '4') {
-            return new _promise2.default(opts.error.bind(null, '请求资源不存在'));
+        if (`${res.status}`.charAt(0) === '4') {
+            return new Promise(opts.error.bind(null, '请求资源不存在'));
         }
 
-        if (('' + res.status).charAt(0) === '5') {
-            return new _promise2.default(opts.error.bind(null, '服务器繁忙，请稍后再试'));
+        if (`${res.status}`.charAt(0) === '5') {
+            return new Promise(opts.error.bind(null, '服务器繁忙，请稍后再试'));
         }
 
         return res;
@@ -175,8 +161,8 @@ function responseStatusHandler(http, opts) {
 }
 
 function responseFormatDataHandler(http, opts) {
-    http.interceptors.response.use(function (res) {
-        if (res.data) {
+    http.interceptors.response.use(res => {
+        if (res.data && res.data.data) {
             res.message = res.data.message;
             res.code = res.data.status;
             res.data = res.data.data;
@@ -188,16 +174,4 @@ function responseFormatDataHandler(http, opts) {
 
 function noop() {}
 
-function errorHandler(message) {
-    alert(message);
-}
-
-function validateStatus(status) {
-    return true;
-}
-
-if (typeof window !== 'undefined' && window.Vue) {
-    window.Vue.use(plugin);
-}
-
-exports.default = plugin;
+export default plugin;

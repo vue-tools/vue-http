@@ -1,36 +1,27 @@
-import axios from 'axios'
 import Vue from 'vue'
 import http from '../src'
+import { expect } from 'chai'
 
 function isDate(time) {
     return new Date(parseInt(time, 10)) instanceof Date
 }
 
-function Spy() {
-    return function counter() {
-        if(!counter.callCount) {
-            counter.callCount = 0
-        }
-
-        counter.callCount++
-    }
-}
-
 describe('Vue-http', () => {
-    let spy1 = Spy()
-    let spy2 = Spy()
+    let params, errorCallback, loadingCallback
 
+    params = { foo: 'bar' }
+    errorCallback = sinon.spy()
+    loadingCallback = sinon.spy()
+    
     Vue.use(http, {
-        error: spy1,
-        loading: spy2,
         timeout: 2000,
         timestamp: true,
-        root: `${location.protocol}//${location.hostname}:8889`
+        error: errorCallback,
+        loading: loadingCallback,
+        root: `${location.protocol}//${location.hostname}:9877`
     })
 
     it('get', (done) => {
-        let params = { foo: 'bar' }
-        
         Vue.http.get('get', { params }).then((res) => {
             expect(res.status).to.equal(200)
             expect(res.statusText).to.equal("OK")
@@ -40,9 +31,29 @@ describe('Vue-http', () => {
     })
 
     it('post', (done) => {
-        let params = { foo: 'bar' }
+        Promise.all([Vue.http.post('post', params), Vue.http.post('post')]).then((res) => {
+            expect(res[0].status).to.equal(200)
+            expect(res[0].statusText).to.equal("OK")
+            expect(res[0].data.foo).to.equal(params.foo)
+            done()
+        })
+    })
 
-        Vue.http.post('post', params).then((res) => {
+    it('onLine', (done) => {
+        Vue.http.get('get', Object.assign({}, { params }, {
+            onLine: false
+        })).then((res) => {
+            expect(res.status).to.equal(200)
+            expect(res.statusText).to.equal("OK")
+            expect(res.data.foo).to.equal(params.foo)
+            done()
+        })
+    })
+
+    it ('duration', (done) => {
+         Vue.http.get('get', Object.assign({}, { params }, {
+            duration: 0
+        })).then((res) => {
             expect(res.status).to.equal(200)
             expect(res.statusText).to.equal("OK")
             expect(res.data.foo).to.equal(params.foo)
@@ -51,9 +62,7 @@ describe('Vue-http', () => {
     })
 
     it('timestamp', (done) => {
-        let params = { foo: 'bar' }
-
-        Promise.all([Vue.http.get('timestamp', { params }), Vue.http.post('timestamp', params)]).then((res) => {
+        Promise.all([Vue.http.get('timestamp?a=1', { params }), Vue.http.post('timestamp', params)]).then((res) => {
             expect(res[0].status).to.equal(200)
             expect(res[0].statusText).to.equal("OK")
             expect(res[0].data.foo).to.equal(params.foo)
@@ -70,7 +79,7 @@ describe('Vue-http', () => {
     it('timeout', (done) => {
         Vue.http.get('timeout')
         setTimeout(() => {
-            expect(spy1.callCount).to.equal(1)
+            expect(errorCallback.callCount).to.equal(2)
             done()
         }, 2200)
     }).timeout(3000)
@@ -79,26 +88,24 @@ describe('Vue-http', () => {
         Vue.http.get('loading')
 
         setTimeout(() => {
-            expect(spy2.callCount).to.equal(4)
+            expect(loadingCallback.callCount).to.equal(4)
             done()
         }, 2200)
     }).timeout(3000)
 
     it('repeat', (done) => {
-        let params = { foo: 'bar' }
-
         Vue.http.get('repeat', { params }).then((res) => {
             expect(res.status).to.equal(200)
             expect(res.data.foo).to.equal(params.foo)
             done()
         })
 
-        Vue.http.get('repeat', { params })
+        Vue.http.get('repeat', {
+            params
+        })
     })
 
     it('format data', (done) => {
-        let params = { foo: 'bar' }
-
         Vue.http.get('data', { params }).then((res) => {
             expect(res.code).to.equal(20000)
             expect(res.message).to.equal('done')
@@ -111,7 +118,7 @@ describe('Vue-http', () => {
         Vue.http.get('4xx')
 
         setTimeout(() => {
-            expect(spy1.callCount).to.equal(2)
+            expect(errorCallback.callCount).to.equal(3)
             done()
         }, 2200)
     }).timeout(3000)
@@ -120,7 +127,7 @@ describe('Vue-http', () => {
         Vue.http.get('5xx')
 
         setTimeout(() => {
-            expect(spy1.callCount).to.equal(3)
+            expect(errorCallback.callCount).to.equal(4)
             done()
         }, 2200)
     }).timeout(3000)

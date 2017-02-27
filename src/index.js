@@ -11,8 +11,8 @@ function plugin(Vue, opts) {
         duration: 1000,
         timestamp: false,
         credentials: false,
-        error: errorHandler,
-        validateStatus: validateStatus
+        validateStatus: null,
+        error: function(message) { alert(message) }
     }, opts)
 
     http.defaults.baseURL = opts.root
@@ -37,21 +37,29 @@ function plugin(Vue, opts) {
 
 function requestFailedHandler(http, opts) {
     http.interceptors.request.use((config) => {
-        if(!(config.onLine = window.navigator.onLine)) {
+        let onLine = true
+
+        if (window.navigator.onLine !== undefined) {
+            onLine = window.navigator.onLine
+        }
+
+        if (config.onLine !== undefined) {
+            onLine = config.onLine
+        }
+
+        if(!(config.onLine = onLine)) {
             opts.error('网络超时')
         }
-            
+        
         return config
     })
 }
 
 function requestTimeoutHandler(http, opts) {
     http.interceptors.response.use((res) => res, (err) => {
-        if (err.message && err.message.indexOf('timeout') !== -1) {
+        if (err.code === 'ECONNABORTED') {
             return Promise.resolve({ config: err.config, status: 601, statusText: '网络超时' })
         }
-
-        return Promise.reject(err)
     })
 }
 
@@ -63,7 +71,7 @@ function requestLoadingHandler(http, opts) {
         if(!config.onLine) {
             return config
         }
-
+        
         if (config.duration !== 0) {
             config.loadingTimeout = setTimeout(() => {
                 opts.loading(config.loadingShow = true)
@@ -152,7 +160,7 @@ function responseStatusHandler(http, opts) {
 
 function responseFormatDataHandler(http, opts) {
     http.interceptors.response.use((res) => {
-        if (res.data) {
+        if (res.data && res.data.data) {
             res.message = res.data.message
             res.code = res.data.status
             res.data = res.data.data
@@ -163,17 +171,5 @@ function responseFormatDataHandler(http, opts) {
 }
 
 function noop() { }
-
-function errorHandler(message) {
-    alert(message)
-}
-
-function validateStatus(status) {
-    return true
-}
-
-if (typeof window !== 'undefined' && window.Vue) {
-    window.Vue.use(plugin)
-}
 
 export default plugin
