@@ -1,6 +1,6 @@
 {
   "name": "vue-http",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "repository": {
     "type": "git",
     "url": "https://github.com/vue-tools/vue-http"
@@ -10,6 +10,15 @@
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/vue-tools/vue-http/issues"
+  },
+  "babel": {
+    "presets": [
+      "es2015",
+      "stage-0"
+    ],
+    "plugins": [
+      "transform-runtime"
+    ]
   },
   "homepage": "https://github.com/vue-tools/vue-http#readme",
   "devDependencies": {
