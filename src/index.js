@@ -160,10 +160,10 @@ function responseStatusHandler(http, opts) {
 
 function responseFormatDataHandler(http, opts) {
     http.interceptors.response.use((res) => {
-        if (res.data && res.data.data) {
-            res.message = res.data.message
+        if (res.data) {
             res.code = res.data.status
-            res.data = res.data.data
+            res.message = res.data.message
+            res.data = res.data.data || res.data
         }
 
         return res
