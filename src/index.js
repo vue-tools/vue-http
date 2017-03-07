@@ -57,7 +57,7 @@ function requestFailedHandler(http, opts) {
 
 function requestTimeoutHandler(http, opts) {
     http.interceptors.response.use((res) => res, (err) => {
-        if (err.code === 'ECONNABORTED') {
+        if (err.code === 'ECONNABORTED' || err.message === 'Network Error') {
             return Promise.resolve({ config: err.config, status: 601, statusText: '网络超时' })
         }
     })

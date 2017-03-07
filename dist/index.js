@@ -83,7 +83,7 @@ function requestTimeoutHandler(http, opts) {
     http.interceptors.response.use(function (res) {
         return res;
     }, function (err) {
-        if (err.code === 'ECONNABORTED') {
+        if (err.code === 'ECONNABORTED' || err.message === 'Network Error') {
             return _promise2.default.resolve({ config: err.config, status: 601, statusText: '网络超时' });
         }
     });
