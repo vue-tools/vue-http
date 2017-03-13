@@ -7,16 +7,15 @@ function isDate(time) {
 }
 
 describe('Vue-http', () => {
-    let params, errorCallback, loadingCallback
+    let params, loadingCallback
 
     params = { foo: 'bar' }
-    errorCallback = sinon.spy()
+    window.alert = sinon.spy()
     loadingCallback = sinon.spy()
     
     Vue.use(http, {
         timeout: 2000,
         timestamp: true,
-        error: errorCallback,
         loading: loadingCallback,
         root: `${location.protocol}//${location.hostname}:9877`
     })
@@ -79,7 +78,7 @@ describe('Vue-http', () => {
     it('timeout', (done) => {
         Vue.http.get('timeout')
         setTimeout(() => {
-            expect(errorCallback.callCount).to.equal(2)
+            expect(window.alert.callCount).to.equal(2)
             done()
         }, 2200)
     }).timeout(3000)
@@ -118,7 +117,7 @@ describe('Vue-http', () => {
         Vue.http.get('4xx')
 
         setTimeout(() => {
-            expect(errorCallback.callCount).to.equal(3)
+            expect(window.alert.callCount).to.equal(3)
             done()
         }, 2200)
     }).timeout(3000)
@@ -127,7 +126,7 @@ describe('Vue-http', () => {
         Vue.http.get('5xx')
 
         setTimeout(() => {
-            expect(errorCallback.callCount).to.equal(4)
+            expect(window.alert.callCount).to.equal(4)
             done()
         }, 2200)
     }).timeout(3000)

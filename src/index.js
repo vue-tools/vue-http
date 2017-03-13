@@ -12,7 +12,7 @@ function plugin(Vue, opts) {
         timestamp: false,
         credentials: false,
         validateStatus: null,
-        error: /* istanbul ignore next */ function(message) { alert(message) }
+        error: function(message) { alert(message) }
     }, opts)
 
     http.defaults.baseURL = opts.root
