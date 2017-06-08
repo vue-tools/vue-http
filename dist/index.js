@@ -53,7 +53,6 @@ function plugin(Vue, opts) {
     requestFailedHandler(http, opts);
 
     responseStatusHandler(http, opts);
-    responseFormatDataHandler(http, opts);
 
     Vue.http = http;
     Vue.prototype.$http = http;
@@ -178,18 +177,6 @@ function responseStatusHandler(http, opts) {
 
         if (('' + res.status).charAt(0) === '5') {
             return new _promise2.default(opts.error.bind(null, '服务器繁忙，请稍后再试'));
-        }
-
-        return res;
-    });
-}
-
-function responseFormatDataHandler(http, opts) {
-    http.interceptors.response.use(function (res) {
-        if (res.data) {
-            res.code = res.data.status;
-            res.message = res.data.message;
-            res.data = res.data.data || res.data;
         }
 
         return res;

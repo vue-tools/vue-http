@@ -104,15 +104,6 @@ describe('Vue-http', () => {
         })
     })
 
-    it('format data', (done) => {
-        Vue.http.get('data', { params }).then((res) => {
-            expect(res.code).to.equal(20000)
-            expect(res.message).to.equal('done')
-            expect(res.data.foo).to.equal(params.foo)
-            done()
-        })
-    })
-
     it('respone status: 4xx', (done) => {
         Vue.http.get('4xx')
 
