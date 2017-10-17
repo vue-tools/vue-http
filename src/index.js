@@ -20,7 +20,7 @@ function plugin(Vue, opts) {
     http.defaults.timeout = opts.timeout
     http.defaults.duration = opts.duration
     http.defaults.withCredentials = opts.credentials
-    http.defaults.validateStatus = opts.svalidateStatus
+    http.defaults.validateStatus = opts.validateStatus
 
     requestTimeoutHandler(http, opts)
     requestLoadingHandler(http, opts)
