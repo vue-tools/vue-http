@@ -1,9 +1,11 @@
 let koaMiddlewares = require('./middlewares')
 let webpackTestConfig = require('./webpack.test.conf')
 
+process.env.CHROME_BIN = require('puppeteer').executablePath()
+
 module.exports = function (config) {
     config.set({
-        browsers: ['PhantomJS'],
+        browsers: ['ChromeHeadless'],
         frameworks: ['mocha', 'promise', 'sinon', 'koa'],
         files: ['./index.js'],
         preprocessors: {
@@ -31,7 +33,7 @@ module.exports = function (config) {
             'karma-coverage',
             'karma-spec-reporter',
             'karma-sourcemap-loader',
-            'karma-phantomjs-launcher'
+            'karma-chrome-launcher'
         ],
         koa: {
             port: 9877,
