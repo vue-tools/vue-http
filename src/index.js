@@ -12,6 +12,7 @@ function plugin(Vue, opts) {
         timestamp: false,
         credentials: false,
         validateStatus: null,
+        autoFixedError: true,
         error: function(message) { alert(message) }
     }, opts)
 
@@ -28,7 +29,9 @@ function plugin(Vue, opts) {
     requestRepeatHandler(http, opts)
     requestFailedHandler(http, opts)
 
-    responseStatusHandler(http, opts)
+    if (opts.autoFixedError) {
+        responseStatusHandler(http, opts)
+    }
 
     Vue.http = http
     Vue.prototype.$http = http
