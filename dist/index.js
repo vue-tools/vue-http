@@ -51,7 +51,7 @@ function plugin(Vue, opts) {
     requestLoadingHandler(http, opts);
     requestTimestampHandler(http, opts);
     requestRepeatHandler(http, opts);
-    requestFailedHandler(http, opts);
+    // requestFailedHandler(http, opts)
 
     if (opts.autoFixedError) {
         responseStatusHandler(http, opts);
